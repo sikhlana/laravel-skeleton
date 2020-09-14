@@ -2,31 +2,30 @@ FROM php:7.4-fpm-alpine
 
 ARG DEPLOY_ENV
 
+VOLUME /app/public/mix-manifest.json
+VOLUME /app/php-fpm.sock
+VOLUME /app/storage
+
 COPY --from=composer /usr/bin/composer /usr/bin
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin
-
-WORKDIR /
 
 RUN install-php-extensions bcmath bz2 exif igbinary imagick \
     mcrypt mysqli opcache pcntl pdo_mysql pdo_pgsql \
     redis soap sockets sysvmsg sysvsem sysvshm tidy uuid \
     xmlrpc xsl zip
 
+COPY . /app
+RUN chown app:app -R /app
+
 RUN addgroup -g 101 app \
     && adduser -u 101 -D -G app app
 
 USER app
+WORKDIR /app
 
 # Supercharge package downloads
 RUN composer global require hirak/prestissimo --ansi --no-progress \
     && composer clear-cache
-
-COPY . /app
-WORKDIR /app
-
-USER root
-RUN chown app:app -R /app
-USER app
 
 RUN if [[ "$DEPLOY_ENV" = "production" ]]; \
         then composer install --no-dev --classmap-authoritative --ansi --no-progress --no-scripts; \
@@ -36,7 +35,3 @@ RUN if [[ "$DEPLOY_ENV" = "production" ]]; \
 
 COPY .docker/php/php-fpm.conf /php-fpm.conf
 COPY .docker/php/docker-entrypoint.sh /docker-entrypoint.sh
-
-VOLUME /app/public/mix-manifest.json
-VOLUME /app/php-fpm.sock
-VOLUME /app/storage
