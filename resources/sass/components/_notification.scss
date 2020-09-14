@@ -1,0 +1,41 @@
+
+#notification {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transition: transform 300ms ease-in 0s;
+    transform: translateY(-100%);
+    display: flex;
+    padding: 15px 30px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    background: #2d3142;
+    z-index: 99999;
+
+    &.show {
+        transform: translateY(0);
+    }
+
+    &.error {
+        background: #de541e;
+    }
+
+    &.success {
+        background: #adc698;
+    }
+
+    &.warning {
+        background: #ede668;
+    }
+
+    .message {
+        flex-grow: 2;
+        margin: 0;
+    }
+
+    .close.icon {
+        cursor: pointer;
+    }
+}

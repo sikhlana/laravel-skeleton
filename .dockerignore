@@ -1,0 +1,9 @@
+.git/
+storage/
+node_modules/
+vendor/
+.dockerignore
+.gitignore
+.editorconfig
+.env.example
+.styleci.yml

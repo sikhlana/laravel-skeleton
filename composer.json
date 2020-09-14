@@ -9,6 +9,11 @@
     "license": "MIT",
     "require": {
         "php": "^7.3",
+        "ext-PDO": "*",
+        "ext-imagick": "*",
+        "ext-json": "*",
+        "ext-pcntl": "*",
+        "beyondcode/laravel-websockets": "^1.7",
         "calebporzio/sushi": "^2.1",
         "doctrine/dbal": "^2.10",
         "fideloper/proxy": "^4.2",
@@ -19,6 +24,7 @@
         "laravel/tinker": "^2.0",
         "league/flysystem-aws-s3-v3": "^1.0",
         "monicahq/laravel-cloudflare": "^1.7",
+        "pusher/pusher-php-server": "^4.1",
         "sikhlana/laravel-modular": "^1.0",
         "sikhlana/laravel-singleton": "^1.0"
     },

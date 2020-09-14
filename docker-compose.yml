@@ -1,0 +1,69 @@
+version: '3'
+
+services:
+  nginx:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+      args:
+        - DEPLOY_ENV=${APP_ENV}
+    ports:
+    - 8080:80
+    volumes:
+    - ./storage/logs/nginx:/app/logs
+    - mix-manifest:/app/public/mix-manifest.json
+    - fpm-sock:/app/php-fpm.sock
+    command: nginx -g "daemon off;"
+
+  app:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile-php
+      args:
+        - DEPLOY_ENV=${APP_ENV}
+    image: sikhlana/main-application
+    volumes:
+    - ./storage:/app/storage
+    - mix-manifest:/app/public/mix-manifest.json
+    - fpm-sock:/app/php-fpm.sock
+    links:
+      - redis
+    command: /bin/sh "/docker-entrypoint.sh"
+
+  cron:
+    restart: always
+    image: sikhlana/main-application
+    volumes:
+      - ./storage:/app/storage
+      - mix-manifest:/app/public/mix-manifest.json
+    links:
+      - redis
+    depends_on:
+      - app
+    command: /bin/sh -c "while [ true ]; do (php /app/artisan schedule:run --verbose --no-interaction &); sleep 60; done"
+
+  worker:
+    restart: always
+    image: sikhlana/main-application
+    volumes:
+      - ./storage:/app/storage
+      - mix-manifest:/app/public/mix-manifest.json
+    links:
+      - redis
+    depends_on:
+      - app
+    command: php /app/artisan queue:work
+
+  redis:
+    restart: always
+    image: redis:alpine
+    volumes:
+    - redis-db:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  fpm-sock: {}
+  mix-manifest: {}
+  redis-db: {}
