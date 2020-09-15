@@ -17,14 +17,14 @@ FROM frapsoft/openssl AS dhparam
 RUN openssl dhparam -out /dhparam.pem 2048
 
 # The main HTTP server!
-FROM nginx:1.19.2-alpine
+FROM nginx:mainline-alpine
 
 EXPOSE 80
 
-VOLUME /app/public/mix-manifest.json
-VOLUME /app/php-fpm.sock
-VOLUME /app/logs
+VOLUME /var/log/nginx
 
 COPY --from=assets /app/public /app/public
 COPY .docker/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY --from=dhparam /dhparam.pem /app/nginx
+COPY --from=dhparam /dhparam.pem /etc/nginx/dhparam.pem
+
+ENTRYPOINT []

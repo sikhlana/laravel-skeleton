@@ -1,69 +1,87 @@
 version: '3'
 
 services:
+  master:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile-php
+      args:
+        - DEPLOY_ENV=${APP_ENV}
+    image: master-image
+    volumes:
+      - ./storage:/app/storage
+    networks:
+      - redis-network
+    depends_on:
+      - redis
+    command: /bin/sh "/docker-entrypoint.sh"
+    tty: true
+    stop_signal: SIGTERM
+
   nginx:
-    restart: always
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile-nginx
       args:
         - DEPLOY_ENV=${APP_ENV}
     ports:
-    - 8080:80
+      - 8080:80
     volumes:
-    - ./storage/logs/nginx:/app/logs
-    - mix-manifest:/app/public/mix-manifest.json
-    - fpm-sock:/app/php-fpm.sock
+      - ./storage/logs/nginx:/var/log/nginx
+    networks:
+      - fastcgi-network
+    depends_on:
+      - web
     command: nginx -g "daemon off;"
+    tty: true
 
-  app:
-    restart: always
-    build:
-      context: .
-      dockerfile: Dockerfile-php
-      args:
-        - DEPLOY_ENV=${APP_ENV}
-    image: sikhlana/main-application
-    volumes:
-    - ./storage:/app/storage
-    - mix-manifest:/app/public/mix-manifest.json
-    - fpm-sock:/app/php-fpm.sock
-    links:
-      - redis
-    command: /bin/sh "/docker-entrypoint.sh"
-
-  cron:
-    restart: always
-    image: sikhlana/main-application
+  web:
+    restart: unless-stopped
+    image: master-image
     volumes:
       - ./storage:/app/storage
-      - mix-manifest:/app/public/mix-manifest.json
-    links:
-      - redis
+    networks:
+      - redis-network
+      - fastcgi-network
     depends_on:
-      - app
-    command: /bin/sh -c "while [ true ]; do (php /app/artisan schedule:run --verbose --no-interaction &); sleep 60; done"
+      - master
+    expose:
+      - 9000
+    command: php-fpm --fpm-config /php-fpm.conf
+    tty: true
+    stop_signal: SIGKILL
 
   worker:
-    restart: always
-    image: sikhlana/main-application
+    restart: unless-stopped
+    image: master-image
     volumes:
       - ./storage:/app/storage
-      - mix-manifest:/app/public/mix-manifest.json
-    links:
-      - redis
+    networks:
+      - redis-network
     depends_on:
-      - app
+      - master
     command: php /app/artisan queue:work
+    tty: true
+    stop_signal: SIGTERM
 
   redis:
-    restart: always
+    restart: unless-stopped
     image: redis:alpine
     volumes:
-    - redis-db:/data
+      - redis-db:/data
+    networks:
+      - redis-network
     command: redis-server --appendonly yes
+    tty: true
 
 volumes:
-  fpm-sock: {}
-  mix-manifest: {}
   redis-db: {}
+
+networks:
+  redis-network:
+    driver: bridge
+
+  fastcgi-network:
+    driver: bridge

@@ -1,24 +1,37 @@
+# Compile all the assets!
+FROM node:lts-alpine AS assets
+
+ARG DEPLOY_ENV
+
+COPY . /app
+WORKDIR /app
+
+RUN npm install \
+    && if [[ "$DEPLOY_ENV" = "production" ]]; \
+        then npm run production; \
+        else npm run development; \
+    fi
+
 FROM php:7.4-fpm-alpine
 
 ARG DEPLOY_ENV
 
-VOLUME /app/public/mix-manifest.json
-VOLUME /app/php-fpm.sock
 VOLUME /app/storage
 
 COPY --from=composer /usr/bin/composer /usr/bin
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin
 
-RUN install-php-extensions bcmath bz2 exif igbinary imagick \
+RUN install-php-extensions bcmath bz2 exif imagick \
     mcrypt mysqli opcache pcntl pdo_mysql pdo_pgsql \
     redis soap sockets sysvmsg sysvsem sysvshm tidy uuid \
     xmlrpc xsl zip
 
-COPY . /app
-RUN chown app:app -R /app
-
 RUN addgroup -g 101 app \
     && adduser -u 101 -D -G app app
+
+COPY . /app
+COPY --from=assets /app/public/mix-manifest.json /app/public/mix-manifest.json
+RUN chown app:app -R /app
 
 USER app
 WORKDIR /app
@@ -35,3 +48,5 @@ RUN if [[ "$DEPLOY_ENV" = "production" ]]; \
 
 COPY .docker/php/php-fpm.conf /php-fpm.conf
 COPY .docker/php/docker-entrypoint.sh /docker-entrypoint.sh
+
+ENTRYPOINT []
