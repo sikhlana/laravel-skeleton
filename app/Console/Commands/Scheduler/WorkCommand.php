@@ -56,10 +56,13 @@ class WorkCommand extends Command
     {
         pcntl_async_signals(true);
 
-        pcntl_signal(SIGTERM, function () {
+        $handler = function () {
             $this->quit = true;
 
             exit(0);
-        });
+        };
+
+        pcntl_signal(SIGINT, $handler);
+        pcntl_signal(SIGTERM, $handler);
     }
 }

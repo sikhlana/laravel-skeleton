@@ -26,7 +26,8 @@ RUN install-php-extensions bcmath bz2 exif imagick \
     redis soap sockets sysvmsg sysvsem sysvshm tidy uuid \
     xmlrpc xsl zip
 
-RUN addgroup -g 101 app \
+RUN apk add bash --no-cache \
+    && addgroup -g 101 app \
     && adduser -u 101 -D -G app app
 
 COPY . /app

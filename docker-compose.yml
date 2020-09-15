@@ -15,9 +15,8 @@ services:
       - redis-network
     depends_on:
       - redis
-    command: /bin/sh "/docker-entrypoint.sh"
+    command: /bin/bash /docker-entrypoint.sh
     tty: true
-    stop_signal: SIGTERM
 
   nginx:
     restart: unless-stopped
@@ -27,9 +26,7 @@ services:
       args:
         - DEPLOY_ENV=${APP_ENV}
     ports:
-      - 8080:80
-    volumes:
-      - ./storage/logs/nginx:/var/log/nginx
+      - ${APP_PORT}:80
     networks:
       - fastcgi-network
     depends_on:
@@ -77,7 +74,8 @@ services:
     tty: true
 
 volumes:
-  redis-db: {}
+  redis-db:
+    driver: local
 
 networks:
   redis-network:
