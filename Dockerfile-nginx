@@ -1,13 +1,13 @@
 # Compile all the assets!
 FROM node:lts-alpine AS assets
 
-ARG DEPLOY_ENV
+ARG BUILD_ENV
 
 COPY . /app
 WORKDIR /app
 
 RUN npm install \
-    && if [[ "$DEPLOY_ENV" = "production" ]]; \
+    && if [[ "BUILD_ENV" = "production" ]]; \
         then npm run production; \
         else npm run development; \
     fi
@@ -19,10 +19,12 @@ RUN openssl dhparam -out /dhparam.pem 2048
 # The main HTTP server!
 FROM nginx:mainline-alpine
 
-EXPOSE 80
+RUN mkdir /app
 
 COPY --from=assets /app/public /app/public
 COPY .docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY --from=dhparam /dhparam.pem /etc/nginx/dhparam.pem
+
+EXPOSE 80
 
 ENTRYPOINT []

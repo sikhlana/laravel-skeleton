@@ -1,22 +1,20 @@
 # Compile all the assets!
 FROM node:lts-alpine AS assets
 
-ARG DEPLOY_ENV
+ARG BUILD_ENV
 
 COPY . /app
 WORKDIR /app
 
 RUN npm install \
-    && if [[ "$DEPLOY_ENV" = "production" ]]; \
+    && if [[ "$BUILD_ENV" = "production" ]]; \
         then npm run production; \
         else npm run development; \
     fi
 
 FROM php:7.4-fpm-alpine
 
-ARG DEPLOY_ENV
-
-VOLUME /app/storage
+ARG BUILD_ENV
 
 COPY --from=composer /usr/bin/composer /usr/bin
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin
@@ -32,7 +30,8 @@ RUN apk add bash --no-cache \
 
 COPY . /app
 COPY --from=assets /app/public/mix-manifest.json /app/public/mix-manifest.json
-RUN chown app:app -R /app
+RUN mkdir /app/storage \
+    && chown app:app -R /app
 
 USER app
 WORKDIR /app
@@ -41,13 +40,18 @@ WORKDIR /app
 RUN composer global require hirak/prestissimo --ansi --no-progress \
     && composer clear-cache
 
-RUN if [[ "$DEPLOY_ENV" = "production" ]]; \
+RUN if [[ "$BUILD_ENV" = "production" ]]; \
         then composer install --no-dev --classmap-authoritative --ansi --no-progress --no-scripts; \
         else composer install --ansi --no-progress --no-scripts; \
     fi \
     && composer clear-cache
 
 COPY .docker/php/php-fpm.conf /php-fpm.conf
-COPY .docker/php/docker-entrypoint.sh /docker-entrypoint.sh
+COPY .docker/php/run.sh /app/run.sh
+
+VOLUME /app/storage
+VOLUME /app/.env
+
+STOPSIGNAL SIGTERM
 
 ENTRYPOINT []

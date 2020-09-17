@@ -2,29 +2,30 @@ version: '3'
 
 services:
   master:
-    restart: unless-stopped
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile-php
       args:
         - DEPLOY_ENV=${APP_ENV}
-    image: master-image
+    image: sikhlana/skeleton-php
     volumes:
-      - ./storage:/app/storage
+      - ./.env:/app/.env:ro
+      - application-storage:/app/storage
     networks:
       - redis-network
     depends_on:
       - redis
-    command: /bin/bash /docker-entrypoint.sh
+    command: /bin/bash /app/run.sh
     tty: true
 
   nginx:
-    restart: unless-stopped
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile-nginx
       args:
-        - DEPLOY_ENV=${APP_ENV}
+        - BUILD_ENV=${APP_ENV}
     ports:
       - ${APP_PORT}:80
     networks:
@@ -35,10 +36,11 @@ services:
     tty: true
 
   web:
-    restart: unless-stopped
-    image: master-image
+    restart: always
+    image: sikhlana/skeleton-php
     volumes:
-      - ./storage:/app/storage
+      - ./.env:/app/.env:ro
+      - application-storage:/app/storage
     networks:
       - redis-network
       - fastcgi-network
@@ -47,24 +49,37 @@ services:
     expose:
       - 9000
     command: php-fpm --fpm-config /php-fpm.conf
-    tty: true
     stop_signal: SIGKILL
+    tty: true
 
   worker:
-    restart: unless-stopped
-    image: master-image
+    restart: always
+    image: sikhlana/skeleton-php
     volumes:
-      - ./storage:/app/storage
+      - ./.env:/app/.env:ro
+      - application-storage:/app/storage
     networks:
       - redis-network
     depends_on:
       - master
     command: php /app/artisan queue:work
     tty: true
-    stop_signal: SIGTERM
+
+  cron:
+    restart: always
+    image: sikhlana/skeleton-php
+    volumes:
+      - ./.env:/app/.env:ro
+      - application-storage:/app/storage
+    networks:
+      - redis-network
+    depends_on:
+      - master
+    command: php /app/artisan scheduler:work
+    tty: true
 
   redis:
-    restart: unless-stopped
+    restart: always
     image: redis:alpine
     volumes:
       - redis-db:/data
@@ -75,6 +90,9 @@ services:
 
 volumes:
   redis-db:
+    driver: local
+
+  application-storage:
     driver: local
 
 networks:
